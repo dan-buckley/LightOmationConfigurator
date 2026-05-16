@@ -33,9 +33,14 @@ A local web application for managing WLED presets and configuration across a fle
 ### Quick start (Docker Compose)
 
 ```bash
-cp .env.example .env          # create local env file (edit if needed)
+cp .env.example .env          # create local env file — edit ports if needed
 docker compose up             # starts backend on :8000 and frontend on :3000
 ```
+
+> **Port conflicts?** If another Docker app is already using port 8000 or 3000,
+> `docker compose up` will fail with `port is already allocated`. Open `.env` and
+> change `BACKEND_PORT` and/or `FRONTEND_PORT` to free ports (e.g. 8001 / 3001).
+> See `.env.example` for details.
 
 The backend runs Alembic migrations automatically on startup. The database is stored in a named Docker volume (`sqlite_data`).
 
