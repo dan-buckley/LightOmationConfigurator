@@ -27,7 +27,7 @@
 | ID | Module | Layer | Status | Depends On | Milestone | Spec |
 |---|---|---|---|---|---|---|
 | 0.1 | Project Scaffold | Foundation | `Done` | — | M0 | [0.1](specs/0.1_project_scaffold.md) |
-| 0.2 | Database Schema | Foundation | `In Progress` | 0.1 | M0 | [0.2](specs/0.2_database_schema.md) |
+| 0.2 | Database Schema | Foundation | `Done` | 0.1 | M0 | [0.2](specs/0.2_database_schema.md) |
 | 0.3 | API Scaffold | Foundation | `Backlog` | 0.2 | M0 | [0.3](specs/0.3_api_scaffold.md) |
 | 0.4 | Frontend Scaffold | Foundation | `Backlog` | 0.3 | M0 | [0.4](specs/0.4_frontend_scaffold.md) |
 | 1.1 | Light Profile Manager | Data Management | `Backlog` | 0.4 | M1 | [1.1](specs/1.1_light_profile_manager.md) |
@@ -51,3 +51,4 @@
 |---|---|
 | 2026-05-16 | Build plan created. All modules at Backlog. |
 | 2026-05-16 | 0.1 complete. 0.2 in progress. |
+| 2026-05-16 | 0.2 complete. SQLAlchemy models (10 tables), Alembic initial migration, seed script, lifespan migration runner. README updated with running instructions. |

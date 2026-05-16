@@ -25,7 +25,74 @@ A local web application for managing WLED presets and configuration across a fle
 
 ## Running the app
 
-> Setup instructions will be added once the project scaffold is complete (Module 0.1).
+### Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — easiest path, no other installs needed
+- Or: Python 3.12+ and Node 20+ for running services directly
+
+### Quick start (Docker Compose)
+
+```bash
+cp .env.example .env          # create local env file (edit if needed)
+docker compose up             # starts backend on :8000 and frontend on :3000
+```
+
+The backend runs Alembic migrations automatically on startup. The database is stored in a named Docker volume (`sqlite_data`).
+
+### Local dev (without Docker)
+
+**Backend:**
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+DATABASE_PATH=./dev.db uvicorn app.main:app --reload --port 8000
+```
+
+**Frontend:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Seed dev data
+
+```bash
+cd backend && source .venv/bin/activate
+DATABASE_PATH=./dev.db python -m app.seed           # seed if empty
+DATABASE_PATH=./dev.db python -m app.seed --reset   # clear and reseed
+```
+
+Seeds two lights (`Lightomation-RB-Proto` and `LoM Small Rainbow`) with segments, preset categories, and imported files from `sample_data/`.
+
+### Environment variables
+
+See [`.env.example`](.env.example) for all available variables. Key ones:
+
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_PATH` | `/data/lightomation.db` | SQLite file location |
+| `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed origins |
+| `BACKEND_PORT` | `8000` | Backend port |
+| `FRONTEND_PORT` | `3000` | Frontend port |
+
+### Useful commands
+
+```bash
+# Check the API is up
+curl http://localhost:8000/health
+
+# Run migrations manually
+cd backend && source .venv/bin/activate
+DATABASE_PATH=./dev.db alembic upgrade head
+
+# Open the SQLite database directly
+sqlite3 ./dev.db
+
+# Rebuild Docker containers after dependency changes
+docker compose up --build
+```
 
 ## Documentation
 
