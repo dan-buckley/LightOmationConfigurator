@@ -1,9 +1,26 @@
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from alembic import command
+from alembic.config import Config
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 
-app = FastAPI(title="LightOmation Configurator API")
+
+def _run_migrations() -> None:
+    alembic_cfg = Config(str(Path(__file__).parent.parent / "alembic.ini"))
+    command.upgrade(alembic_cfg, "head")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _run_migrations()
+    yield
+
+
+app = FastAPI(title="LightOmation Configurator API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
