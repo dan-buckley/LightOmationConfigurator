@@ -30,7 +30,7 @@
 | 0.2 | Database Schema | Foundation | `Done` | 0.1 | M0 | [0.2](specs/0.2_database_schema.md) |
 | 0.3 | API Scaffold | Foundation | `Done` | 0.2 | M0 | [0.3](specs/0.3_api_scaffold.md) |
 | 0.4 | Frontend Scaffold | Foundation | `Done` | 0.3 | M0 | [0.4](specs/0.4_frontend_scaffold.md) |
-| 1.1 | Light Profile Manager | Data Management | `Backlog` | 0.4 | M1 | [1.1](specs/1.1_light_profile_manager.md) |
+| 1.1 | Light Profile Manager | Data Management | `Done` | 0.4 | M1 | [1.1](specs/1.1_light_profile_manager.md) |
 | 1.2 | File Import | Data Management | `Backlog` | 0.4 | M1 | [1.2](specs/1.2_file_import.md) |
 | 1.3 | Master Preset Library | Data Management | `Backlog` | 0.4 | M1 | [1.3](specs/1.3_master_preset_library.md) |
 | 1.4 | Light Preset Assignments | Data Management | `Backlog` | 1.1, 1.3 | M1 | [1.4](specs/1.4_light_preset_assignments.md) |
@@ -54,3 +54,4 @@
 | 2026-05-16 | 0.2 complete. SQLAlchemy models (10 tables), Alembic initial migration, seed script, lifespan migration runner. README updated with running instructions. |
 | 2026-05-16 | 0.3 complete. app/schemas.py (SuccessResponse, ErrorResponse, PaginatedResponse), app/routers/ with 11 router stubs, /api/v1 prefix on all routes, exception handlers for HTTPException/422/500. |
 | 2026-05-16 | 0.4 complete. Tailwind CSS, react-router-dom, typed API client, useConnectionStatus hook, 6 shared components (PageLayout, LoadingSpinner, ErrorMessage, EmptyState, ConfirmModal, StatusBadge), sidebar nav layout, 9 placeholder page routes. Build verified clean. |
+| 2026-05-16 | 1.1 complete. Full CRUD for lights and segments: 7 API endpoints, Pydantic schemas, change log writes, coverage gap/overlap detection. Frontend: LightList, LightForm, SegmentEditor with live CoverageBar. All spec acceptance criteria met. |
