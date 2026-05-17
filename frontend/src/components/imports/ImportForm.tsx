@@ -17,6 +17,7 @@ export function ImportForm({ onUploaded }: ImportFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -25,16 +26,23 @@ export function ImportForm({ onUploaded }: ImportFormProps) {
     });
   }, []);
 
+  const lightRequired = fileType === 'presets';
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (lightId === '' || !file) return;
+    if ((lightRequired && lightId === '') || !file) return;
     setSubmitting(true);
     setError(null);
-    const res = await uploadImport(Number(lightId), fileType, file);
+    setNotice(null);
+    const resolvedLightId = lightId === '' ? null : Number(lightId);
+    const res = await uploadImport(resolvedLightId, fileType, file);
     setSubmitting(false);
     if (!res.ok) {
       setError(res.error.message);
       return;
+    }
+    if (res.data.light_created) {
+      setNotice(`New light "${res.data.light_name}" created from this file`);
     }
     // reset
     setFile(null);
@@ -48,22 +56,37 @@ export function ImportForm({ onUploaded }: ImportFormProps) {
 
       {error && <div className="mb-4"><ErrorMessage message={error} /></div>}
 
+      {notice && (
+        <div className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-800">
+          {notice}
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Light</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            Light{!lightRequired && <span className="ml-1 font-normal text-gray-400">(optional for cfg)</span>}
+          </label>
           <select
             value={lightId}
             onChange={(e) => setLightId(e.target.value === '' ? '' : Number(e.target.value))}
-            required
+            required={lightRequired}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           >
-            <option value="">Select a light…</option>
+            <option value="">
+              {lightRequired ? 'Select a light…' : 'Leave blank to create from file…'}
+            </option>
             {lights.map((l) => (
               <option key={l.id} value={l.id}>
                 {l.name}
               </option>
             ))}
           </select>
+          {!lightRequired && (
+            <p className="mt-1 text-xs text-gray-500">
+              If left blank, a new light will be created using the name from the cfg file.
+            </p>
+          )}
         </div>
 
         <div>
@@ -94,7 +117,7 @@ export function ImportForm({ onUploaded }: ImportFormProps) {
       <div className="mt-4 flex justify-end">
         <button
           type="submit"
-          disabled={submitting || lightId === '' || !file}
+          disabled={submitting || (lightRequired && lightId === '') || !file}
           className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? 'Uploading…' : 'Upload'}
@@ -103,3 +126,4 @@ export function ImportForm({ onUploaded }: ImportFormProps) {
     </form>
   );
 }
+

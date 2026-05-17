@@ -33,6 +33,10 @@ class ImportDetail(ImportOut):
     raw_json: str
 
 
+class UploadResult(ImportDetail):
+    light_created: bool = False
+
+
 class ExtractedSegment(BaseModel):
     name: str | None
     start_led: int
@@ -161,31 +165,65 @@ def _parse_cfg_profile(raw: str) -> tuple[int | None, list[ExtractedSegment], li
 # ---------------------------------------------------------------------------
 
 
-@router.post("/upload", response_model=SuccessResponse[ImportDetail], status_code=201)
+@router.post("/upload", response_model=SuccessResponse[UploadResult], status_code=201)
 async def upload_file(
-    light_id: int = Form(...),
+    light_id: int | None = Form(None),
     file_type: str = Form(...),
     file: UploadFile = ...,
     db: Session = Depends(get_db),
-) -> SuccessResponse[ImportDetail]:
+) -> SuccessResponse[UploadResult]:
     if file_type not in ("presets", "cfg"):
         raise HTTPException(
             status_code=422,
             detail="file_type must be 'presets' or 'cfg'",
         )
-    light = db.query(Light).filter(Light.id == light_id).first()
-    if not light:
-        raise HTTPException(status_code=404, detail=f"Light {light_id} not found")
 
+    # Read and validate file content upfront (stream can only be read once)
     raw = await file.read()
     try:
         raw_text = raw.decode("utf-8")
-        json.loads(raw_text)  # validate before writing
+        data = json.loads(raw_text)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise HTTPException(
             status_code=422,
             detail=f"File is not valid JSON: {exc}",
         )
+
+    # Resolve (or auto-create) the light
+    light_created = False
+    if light_id is None:
+        if file_type != "cfg":
+            raise HTTPException(
+                status_code=422,
+                detail="light_id is required for presets imports",
+            )
+        try:
+            auto_name: str = data["id"]["name"]
+        except (KeyError, TypeError):
+            raise HTTPException(
+                status_code=422,
+                detail="cfg.json is missing id.name — cannot auto-create light",
+            )
+        auto_total: int | None = data.get("hw", {}).get("led", {}).get("total")
+
+        light = db.query(Light).filter(Light.name == auto_name).first()
+        if not light:
+            light = Light(name=auto_name, total_leds=auto_total)
+            db.add(light)
+            db.flush()
+            _log_change(
+                db,
+                "light",
+                light.id,
+                "created",
+                after={"name": auto_name, "total_leds": auto_total},
+            )
+            light_created = True
+        light_id = light.id
+    else:
+        light = db.query(Light).filter(Light.id == light_id).first()
+        if not light:
+            raise HTTPException(status_code=404, detail=f"Light {light_id} not found")
 
     imp = ImportedFile(
         light_id=light_id,
@@ -211,7 +249,18 @@ async def upload_file(
         .filter(ImportedFile.id == imp.id)
         .one()
     )
-    return SuccessResponse(data=_make_import_detail(imp))
+    result = UploadResult(
+        id=imp.id,
+        light_id=imp.light_id,
+        light_name=imp.light.name,
+        file_type=imp.file_type,
+        source=imp.source,
+        imported_at=imp.imported_at,
+        notes=imp.notes,
+        raw_json=imp.raw_json,
+        light_created=light_created,
+    )
+    return SuccessResponse(data=result)
 
 
 @router.post(

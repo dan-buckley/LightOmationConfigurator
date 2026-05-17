@@ -17,6 +17,7 @@ export interface ImportOut {
 
 export interface ImportDetail extends ImportOut {
   raw_json: string;
+  light_created: boolean;
 }
 
 export interface ImportsPage {
@@ -44,12 +45,12 @@ export interface ExtractPreview {
 // ---------------------------------------------------------------------------
 
 export function uploadImport(
-  lightId: number,
+  lightId: number | null,
   fileType: 'presets' | 'cfg',
   file: File,
 ): Promise<ApiResult<ImportDetail>> {
   const form = new FormData();
-  form.append('light_id', String(lightId));
+  if (lightId != null) form.append('light_id', String(lightId));
   form.append('file_type', fileType);
   form.append('file', file);
   return api.upload<ImportDetail>('/api/v1/imports/upload', form);
