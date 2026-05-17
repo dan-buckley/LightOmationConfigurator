@@ -1,4 +1,5 @@
-import { api, ApiResult } from './client';
+import { api } from './client';
+import type { ApiResult } from './client';
 
 export type ColourMode = 'source' | 'segment' | 'custom';
 

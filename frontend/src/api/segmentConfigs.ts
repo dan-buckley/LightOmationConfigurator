@@ -119,27 +119,27 @@ export interface DetectColoursResult {
 // ---------------------------------------------------------------------------
 
 export function listSegmentConfigs(lightId: number): Promise<ApiResult<SegmentConfigsPage>> {
-  return api.get<SegmentConfigsPage>(`/lights/${lightId}/segment-configs`);
+  return api.get<SegmentConfigsPage>(`/api/v1/lights/${lightId}/segment-configs`);
 }
 
 export function getSegmentConfig(lightId: number, configId: number): Promise<ApiResult<SegmentConfig>> {
-  return api.get<SegmentConfig>(`/lights/${lightId}/segment-configs/${configId}`);
+  return api.get<SegmentConfig>(`/api/v1/lights/${lightId}/segment-configs/${configId}`);
 }
 
 export function createSegmentConfig(lightId: number, body: SegmentConfigIn): Promise<ApiResult<SegmentConfig>> {
-  return api.post<SegmentConfig>(`/lights/${lightId}/segment-configs`, body);
+  return api.post<SegmentConfig>(`/api/v1/lights/${lightId}/segment-configs`, body);
 }
 
 export function updateSegmentConfig(lightId: number, configId: number, body: SegmentConfigIn): Promise<ApiResult<SegmentConfig>> {
-  return api.put<SegmentConfig>(`/lights/${lightId}/segment-configs/${configId}`, body);
+  return api.put<SegmentConfig>(`/api/v1/lights/${lightId}/segment-configs/${configId}`, body);
 }
 
 export function deleteSegmentConfig(lightId: number, configId: number): Promise<ApiResult<void>> {
-  return api.delete<void>(`/lights/${lightId}/segment-configs/${configId}`);
+  return api.delete<void>(`/api/v1/lights/${lightId}/segment-configs/${configId}`);
 }
 
 export function scanSegments(importId: number, apply = true): Promise<ApiResult<ScanResult>> {
-  return api.post<ScanResult>(`/imports/${importId}/scan-segments`, { apply });
+  return api.post<ScanResult>(`/api/v1/imports/${importId}/scan-segments`, { apply });
 }
 
 // ---------------------------------------------------------------------------
@@ -147,29 +147,29 @@ export function scanSegments(importId: number, apply = true): Promise<ApiResult<
 // ---------------------------------------------------------------------------
 
 export function listGroups(lightId: number, configId: number): Promise<ApiResult<SegmentGroupsPage>> {
-  return api.get<SegmentGroupsPage>(`/lights/${lightId}/segment-configs/${configId}/groups`);
+  return api.get<SegmentGroupsPage>(`/api/v1/lights/${lightId}/segment-configs/${configId}/groups`);
 }
 
 export function createGroup(lightId: number, configId: number, body: SegmentGroupIn): Promise<ApiResult<SegmentGroup>> {
-  return api.post<SegmentGroup>(`/lights/${lightId}/segment-configs/${configId}/groups`, body);
+  return api.post<SegmentGroup>(`/api/v1/lights/${lightId}/segment-configs/${configId}/groups`, body);
 }
 
 export function updateGroup(lightId: number, configId: number, groupId: number, body: SegmentGroupIn): Promise<ApiResult<SegmentGroup>> {
-  return api.put<SegmentGroup>(`/lights/${lightId}/segment-configs/${configId}/groups/${groupId}`, body);
+  return api.put<SegmentGroup>(`/api/v1/lights/${lightId}/segment-configs/${configId}/groups/${groupId}`, body);
 }
 
 export function deleteGroup(lightId: number, configId: number, groupId: number): Promise<ApiResult<void>> {
-  return api.delete<void>(`/lights/${lightId}/segment-configs/${configId}/groups/${groupId}`);
+  return api.delete<void>(`/api/v1/lights/${lightId}/segment-configs/${configId}/groups/${groupId}`);
 }
 
 export function replaceGroupMembers(lightId: number, configId: number, groupId: number, entryIds: number[]): Promise<ApiResult<SegmentGroup>> {
-  return api.put<SegmentGroup>(`/lights/${lightId}/segment-configs/${configId}/groups/${groupId}/members`, { entry_ids: entryIds });
+  return api.put<SegmentGroup>(`/api/v1/lights/${lightId}/segment-configs/${configId}/groups/${groupId}/members`, { entry_ids: entryIds });
 }
 
 export function patchEntryColour(lightId: number, configId: number, entryId: number, colour: string | null): Promise<ApiResult<SegmentConfigEntry>> {
-  return api.patch<SegmentConfigEntry>(`/lights/${lightId}/segment-configs/${configId}/entries/${entryId}/colour`, { colour });
+  return api.patch<SegmentConfigEntry>(`/api/v1/lights/${lightId}/segment-configs/${configId}/entries/${entryId}/colour`, { colour });
 }
 
 export function detectColours(importId: number): Promise<ApiResult<DetectColoursResult>> {
-  return api.post<DetectColoursResult>(`/imports/${importId}/detect-colours`, {});
+  return api.post<DetectColoursResult>(`/api/v1/imports/${importId}/detect-colours`, {});
 }

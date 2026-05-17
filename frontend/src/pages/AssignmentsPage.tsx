@@ -1,16 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Assignment,
-  AssignmentUpdate,
-  ColourMode,
-  addAssignment,
-  deleteAssignment,
-  listAssignments,
-  reorderAssignments,
-  updateAssignment,
-} from '../api/assignments';
-import { LightSummary, getLights } from '../api/lights';
-import { MasterPreset, PresetCategory, listCategories, listPresets } from '../api/presets';
+import type { Assignment, AssignmentUpdate, ColourMode } from '../api/assignments';
+import { addAssignment, deleteAssignment, listAssignments, reorderAssignments, updateAssignment } from '../api/assignments';
+import type { LightSummary } from '../api/lights';
+import { getLights } from '../api/lights';
+import type { MasterPreset, PresetCategory } from '../api/presets';
+import { listCategories, listPresets } from '../api/presets';
 import { EmptyState } from '../components/shared/EmptyState';
 import { PageLayout } from '../components/shared/PageLayout';
 
