@@ -32,7 +32,8 @@
 | 0.4 | Frontend Scaffold | Foundation | `Done` | 0.3 | M0 | [0.4](specs/0.4_frontend_scaffold.md) |
 | 1.1 | Light Profile Manager | Data Management | `Done` | 0.4 | M1 | [1.1](specs/1.1_light_profile_manager.md) |
 | 1.2 | File Import | Data Management | `Done` | 0.4 | M1 | [1.2](specs/1.2_file_import.md) |
-| 1.3 | Master Preset Library | Data Management | `Backlog` | 0.4 | M1 | [1.3](specs/1.3_master_preset_library.md) |
+| 1.2.1 | Segment Config Discovery | Data Management | `In Progress` | 1.2 | M1 | [1.2.1](specs/1.2.1_segment_config_discovery.md) |
+| 1.3 | Master Preset Library | Data Management | `Backlog` | 1.2.1 | M1 | [1.3](specs/1.3_master_preset_library.md) |
 | 1.4 | Light Preset Assignments | Data Management | `Backlog` | 1.1, 1.3 | M1 | [1.4](specs/1.4_light_preset_assignments.md) |
 | 2.1 | Transposition Engine | Processing | `Backlog` | 1.1 | M2 | [2.1](specs/2.1_transposition_engine.md) |
 | 2.2 | Generation Engine | Processing | `Backlog` | 1.4, 2.1 | M2 | [2.2](specs/2.2_generation_engine.md) |
@@ -56,3 +57,4 @@
 | 2026-05-16 | 0.4 complete. Tailwind CSS, react-router-dom, typed API client, useConnectionStatus hook, 6 shared components (PageLayout, LoadingSpinner, ErrorMessage, EmptyState, ConfirmModal, StatusBadge), sidebar nav layout, 9 placeholder page routes. Build verified clean. |
 | 2026-05-16 | 1.1 complete. Full CRUD for lights and segments: 7 API endpoints, Pydantic schemas, change log writes, coverage gap/overlap detection. Frontend: LightList, LightForm, SegmentEditor with live CoverageBar. All spec acceptance criteria met. |
 | 2026-05-17 | 1.2 complete. File import: upload (presets/cfg), list, detail, extract-profile endpoints. Frontend: ImportForm, ImportList, ExtractProfileModal, RawJsonModal. cfg.json extraction reads hw.led.total and hw.led.ins to pre-populate light profile. Network fetch stubbed (501) pending Module 3.2. |
+| 2026-05-17 | Design decision: WLED devices use different segment layouts per preset (e.g. full-strip vs 7-zone vs 5-zone). Added module 1.2.1 to model named segment configurations per light, auto-discover them from presets.json imports, and wire them into master presets before 1.3. Segment configs are the bridge between import and transposition. |
