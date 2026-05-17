@@ -4,6 +4,7 @@ interface ImportListProps {
   imports: ImportOut[];
   onViewRaw: (id: number) => void;
   onExtract: (id: number) => void;
+  onScan: (id: number) => void;
 }
 
 const FILE_TYPE_BADGE: Record<string, string> = {
@@ -23,7 +24,7 @@ function fmt(iso: string) {
   });
 }
 
-export function ImportList({ imports, onViewRaw, onExtract }: ImportListProps) {
+export function ImportList({ imports, onViewRaw, onExtract, onScan }: ImportListProps) {
   if (imports.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-gray-500">No imports yet. Upload a file above.</p>
@@ -75,6 +76,14 @@ export function ImportList({ imports, onViewRaw, onExtract }: ImportListProps) {
                       className="text-teal-600 hover:underline"
                     >
                       Extract profile
+                    </button>
+                  )}
+                  {imp.file_type === 'presets' && (
+                    <button
+                      onClick={() => onScan(imp.id)}
+                      className="text-purple-600 hover:underline"
+                    >
+                      Scan configs
                     </button>
                   )}
                 </div>

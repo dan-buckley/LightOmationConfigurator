@@ -21,6 +21,7 @@ from app.routers import (
     lights,
     network,
     presets,
+    segment_configs,
     validate,
 )
 from app.schemas import ErrorResponse
@@ -89,6 +90,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 app.include_router(health.router, prefix=_API_PREFIX)
 app.include_router(lights.router, prefix=_API_PREFIX + "/lights")
 app.include_router(imports.router, prefix=_API_PREFIX + "/imports")
+app.include_router(segment_configs.router, prefix=_API_PREFIX + "/lights/{light_id}/segment-configs")
 app.include_router(presets.router, prefix=_API_PREFIX + "/presets")
 app.include_router(assignments.router, prefix=_API_PREFIX + "/assignments")
 app.include_router(generate.router, prefix=_API_PREFIX + "/generate")

@@ -6,6 +6,7 @@ import { ExtractProfileModal } from '../components/imports/ExtractProfileModal';
 import { ImportForm } from '../components/imports/ImportForm';
 import { ImportList } from '../components/imports/ImportList';
 import { RawJsonModal } from '../components/imports/RawJsonModal';
+import { ScanSummaryModal } from '../components/imports/ScanSummaryModal';
 import { ErrorMessage } from '../components/shared/ErrorMessage';
 import { LoadingSpinner } from '../components/shared/LoadingSpinner';
 import { PageLayout } from '../components/shared/PageLayout';
@@ -16,6 +17,7 @@ export function ImportPage() {
   const [error, setError] = useState<string | null>(null);
   const [rawModalId, setRawModalId] = useState<number | null>(null);
   const [extractModalId, setExtractModalId] = useState<number | null>(null);
+  const [scanModalId, setScanModalId] = useState<number | null>(null);
 
   const loadImports = useCallback(async () => {
     setLoading(true);
@@ -46,6 +48,8 @@ export function ImportPage() {
             ]);
             if (record.file_type === 'cfg') {
               setExtractModalId(record.id);
+            } else if (record.file_type === 'presets') {
+              setScanModalId(record.id);
             }
           }}
         />
@@ -59,6 +63,7 @@ export function ImportPage() {
               imports={imports}
               onViewRaw={setRawModalId}
               onExtract={setExtractModalId}
+              onScan={setScanModalId}
             />
           )}
         </div>
@@ -76,6 +81,9 @@ export function ImportPage() {
             setExtractModalId(null);
           }}
         />
+      )}
+      {scanModalId !== null && (
+        <ScanSummaryModal importId={scanModalId} onClose={() => setScanModalId(null)} />
       )}
     </PageLayout>
   );

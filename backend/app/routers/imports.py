@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session, selectinload
 
 from app.database import get_db
-from app.models import ChangeLog, ImportedFile, Light, LightSegment
+from app.models import ChangeLog, ImportedFile, Light, LightSegment, LightSegmentConfig, LightSegmentConfigEntry
 from app.schemas import PaginatedResponse, SuccessResponse
 
 router = APIRouter(tags=["imports"])
@@ -48,6 +48,30 @@ class ExtractPreview(BaseModel):
 
 class ExtractRequest(BaseModel):
     apply: bool = False
+
+
+class ScannedConfigEntry(BaseModel):
+    segment_index: int
+    start_led: int
+    stop_led: int
+
+
+class ScannedConfig(BaseModel):
+    name: str
+    entries: list[ScannedConfigEntry]
+    persisted: bool
+    config_id: int | None = None
+
+
+class ScanResult(BaseModel):
+    total_presets_scanned: int
+    unique_configs_found: int
+    new_configs_created: int
+    configs: list[ScannedConfig]
+
+
+class ScanRequest(BaseModel):
+    apply: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -264,7 +288,7 @@ def extract_profile(
         }
         light.total_leds = total_leds
         light.updated_at = datetime.utcnow()
-        # replace segments
+        # replace reference segments
         db.query(LightSegment).filter(LightSegment.light_id == light.id).delete()
         for idx, seg in enumerate(segments):
             db.add(
@@ -284,6 +308,10 @@ def extract_profile(
             ],
         }
         _log_change(db, "light", light.id, "updated", before=before, after=after)
+
+        # also write / update a named segment config "Hardware default"
+        _upsert_hardware_default_config(db, light.id, imp.id, segments)
+
         db.commit()
         applied = True
 
@@ -293,5 +321,203 @@ def extract_profile(
             segments=segments,
             applied=applied,
             warnings=warnings,
+        )
+    )
+
+
+def _upsert_hardware_default_config(
+    db: Session,
+    light_id: int,
+    import_id: int,
+    segments: list[ExtractedSegment],
+) -> LightSegmentConfig:
+    """Create or replace the 'Hardware default' segment config for a light."""
+    cfg = (
+        db.query(LightSegmentConfig)
+        .filter(LightSegmentConfig.light_id == light_id, LightSegmentConfig.name == "Hardware default")
+        .first()
+    )
+    if cfg is None:
+        cfg = LightSegmentConfig(light_id=light_id, name="Hardware default", source_import_id=import_id)
+        db.add(cfg)
+        db.flush()
+    else:
+        cfg.source_import_id = import_id
+        db.query(LightSegmentConfigEntry).filter(LightSegmentConfigEntry.config_id == cfg.id).delete()
+
+    for idx, seg in enumerate(segments):
+        db.add(
+            LightSegmentConfigEntry(
+                config_id=cfg.id,
+                segment_index=idx,
+                name=seg.name,
+                start_led=seg.start_led,
+                stop_led=seg.stop_led,
+            )
+        )
+    return cfg
+
+
+# ---------------------------------------------------------------------------
+# Segment scan helpers (presets.json)
+# ---------------------------------------------------------------------------
+
+
+def _fingerprint(pairs: list[tuple[int, int]]) -> str:
+    return json.dumps(sorted(pairs))
+
+
+def _existing_fingerprints(light_id: int, db: Session) -> dict[str, int]:
+    from sqlalchemy.orm import selectinload as _sel
+    configs = (
+        db.query(LightSegmentConfig)
+        .options(_sel(LightSegmentConfig.entries))
+        .filter(LightSegmentConfig.light_id == light_id)
+        .all()
+    )
+    result: dict[str, int] = {}
+    for cfg in configs:
+        fp = _fingerprint([(e.start_led, e.stop_led) for e in cfg.entries])
+        result[fp] = cfg.id
+    return result
+
+
+def _scan_presets_json_raw(raw: str) -> list[tuple[str, list[tuple[int, int]]]]:
+    """Return [(preset_name, [(start, stop), ...]), ...] for unique segment layouts."""
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return []
+
+    seen: dict[str, str] = {}
+    ordered: list[tuple[str, list[tuple[int, int]]]] = []
+
+    for _key, preset in data.items():
+        if not isinstance(preset, dict):
+            continue
+        if "playlist" in preset:
+            continue
+        seg_list = preset.get("seg")
+        if not seg_list or not isinstance(seg_list, list):
+            continue
+
+        pairs: list[tuple[int, int]] = []
+        for seg in seg_list:
+            if not isinstance(seg, dict):
+                continue
+            if seg.get("on") is False:
+                continue
+            start = seg.get("start")
+            stop = seg.get("stop")
+            if start is None or stop is None:
+                continue
+            pairs.append((int(start), int(stop)))
+
+        if not pairs:
+            continue
+
+        fp = _fingerprint(pairs)
+        if fp in seen:
+            continue
+
+        name = preset.get("n") or f"Config {len(ordered) + 1}"
+        seen[fp] = name
+        ordered.append((name, pairs))
+
+    return ordered
+
+
+# ---------------------------------------------------------------------------
+# Scan endpoint
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{import_id}/scan-segments", response_model=SuccessResponse[ScanResult])
+def scan_segments(
+    import_id: int,
+    body: ScanRequest,
+    db: Session = Depends(get_db),
+) -> SuccessResponse[ScanResult]:
+    """
+    Scan a presets.json import for unique segment configurations.
+    When apply=True (default), persist any newly discovered configs.
+    Idempotent: re-scanning the same file does not create duplicates.
+    """
+    imp = (
+        db.query(ImportedFile)
+        .options(selectinload(ImportedFile.light))
+        .filter(ImportedFile.id == import_id)
+        .first()
+    )
+    if not imp:
+        raise HTTPException(status_code=404, detail=f"Import {import_id} not found")
+    if imp.file_type != "presets":
+        raise HTTPException(
+            status_code=422,
+            detail="scan-segments is only available for presets imports",
+        )
+
+    discovered = _scan_presets_json_raw(imp.raw_json)
+    existing = _existing_fingerprints(imp.light_id, db)
+
+    output_configs: list[ScannedConfig] = []
+    new_count = 0
+
+    for name, pairs in discovered:
+        fp = _fingerprint(pairs)
+        if fp in existing:
+            # already known — return without creating
+            output_configs.append(
+                ScannedConfig(
+                    name=name,
+                    entries=[ScannedConfigEntry(segment_index=i, start_led=s, stop_led=e) for i, (s, e) in enumerate(pairs)],
+                    persisted=True,
+                    config_id=existing[fp],
+                )
+            )
+            continue
+
+        if body.apply:
+            cfg = LightSegmentConfig(light_id=imp.light_id, name=name, source_import_id=import_id)
+            db.add(cfg)
+            db.flush()
+            for idx, (start, stop) in enumerate(pairs):
+                db.add(
+                    LightSegmentConfigEntry(
+                        config_id=cfg.id,
+                        segment_index=idx,
+                        start_led=start,
+                        stop_led=stop,
+                    )
+                )
+            existing[fp] = cfg.id
+            new_count += 1
+            output_configs.append(
+                ScannedConfig(
+                    name=name,
+                    entries=[ScannedConfigEntry(segment_index=i, start_led=s, stop_led=e) for i, (s, e) in enumerate(pairs)],
+                    persisted=True,
+                    config_id=cfg.id,
+                )
+            )
+        else:
+            output_configs.append(
+                ScannedConfig(
+                    name=name,
+                    entries=[ScannedConfigEntry(segment_index=i, start_led=s, stop_led=e) for i, (s, e) in enumerate(pairs)],
+                    persisted=False,
+                    config_id=None,
+                )
+            )
+
+    if body.apply and new_count:
+        db.commit()
+
+    return SuccessResponse(
+        data=ScanResult(
+            total_presets_scanned=len(json.loads(imp.raw_json)) if imp.raw_json else 0,
+            unique_configs_found=len(discovered),
+            new_configs_created=new_count,
+            configs=output_configs,
         )
     )

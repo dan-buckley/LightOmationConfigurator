@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createLight, getLight, updateLight } from '../../api/lights';
 import type { LightIn, LightOut } from '../../api/lights';
+import { SegmentConfigList } from './SegmentConfigList';
 import { SegmentEditor } from './SegmentEditor';
 
 interface LightFormProps {
@@ -205,7 +206,7 @@ export function LightForm({ lightId, onSaved, onCancel }: LightFormProps) {
       {isEdit && light && (
         <div>
           <h3 className="text-base font-semibold text-gray-800 mb-4 border-t pt-6">
-            Segments
+            Reference Segments
           </h3>
           <SegmentEditor
             key={segmentsKey}
@@ -220,6 +221,20 @@ export function LightForm({ lightId, onSaved, onCancel }: LightFormProps) {
               setSegmentsKey((k) => k + 1);
             }}
           />
+        </div>
+      )}
+
+      {/* Segment configurations — only in edit mode */}
+      {isEdit && (
+        <div>
+          <h3 className="text-base font-semibold text-gray-800 mb-1 border-t pt-6">
+            Named Segment Configurations
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Different presets may use different segment layouts. These are discovered automatically
+            from imported files.
+          </p>
+          <SegmentConfigList lightId={lightId} />
         </div>
       )}
     </div>

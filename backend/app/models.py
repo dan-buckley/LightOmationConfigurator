@@ -21,6 +21,7 @@ class Light(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     segments = relationship("LightSegment", back_populates="light", cascade="all, delete-orphan")
+    segment_configs = relationship("LightSegmentConfig", back_populates="light", cascade="all, delete-orphan")
     imported_files = relationship("ImportedFile", back_populates="light")
     preset_assignments = relationship("LightPresetAssignment", back_populates="light")
     generated_files = relationship("GeneratedFile", back_populates="light")
@@ -40,6 +41,34 @@ class LightSegment(Base):
     light = relationship("Light", back_populates="segments")
 
 
+class LightSegmentConfig(Base):
+    __tablename__ = "light_segment_configs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    light_id = Column(Integer, ForeignKey("lights.id"), nullable=False)
+    name = Column(Text, nullable=False)
+    source_import_id = Column(Integer, ForeignKey("imported_files.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    light = relationship("Light", back_populates="segment_configs")
+    source_import = relationship("ImportedFile", back_populates="segment_configs")
+    entries = relationship("LightSegmentConfigEntry", back_populates="config", cascade="all, delete-orphan", order_by="LightSegmentConfigEntry.segment_index")
+    master_presets = relationship("MasterPreset", back_populates="segment_config")
+
+
+class LightSegmentConfigEntry(Base):
+    __tablename__ = "light_segment_config_entries"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    config_id = Column(Integer, ForeignKey("light_segment_configs.id"), nullable=False)
+    segment_index = Column(Integer, nullable=False)
+    name = Column(Text)
+    start_led = Column(Integer, nullable=False)
+    stop_led = Column(Integer, nullable=False)
+
+    config = relationship("LightSegmentConfig", back_populates="entries")
+
+
 class PresetCategory(Base):
     __tablename__ = "preset_categories"
 
@@ -56,6 +85,7 @@ class MasterPreset(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Text, nullable=False)
     category_id = Column(Integer, ForeignKey("preset_categories.id"))
+    segment_config_id = Column(Integer, ForeignKey("light_segment_configs.id"), nullable=True)
     preset_data = Column(Text, nullable=False)
     source_light_id = Column(Integer, ForeignKey("lights.id"), nullable=True)
     source_preset_id = Column(Integer, nullable=True)
@@ -64,6 +94,7 @@ class MasterPreset(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     category = relationship("PresetCategory", back_populates="presets")
+    segment_config = relationship("LightSegmentConfig", back_populates="master_presets")
     assignments = relationship("LightPresetAssignment", back_populates="master_preset")
 
 
@@ -94,6 +125,7 @@ class ImportedFile(Base):
     notes = Column(Text)
 
     light = relationship("Light", back_populates="imported_files")
+    segment_configs = relationship("LightSegmentConfig", back_populates="source_import")
 
 
 class GeneratedFile(Base):
