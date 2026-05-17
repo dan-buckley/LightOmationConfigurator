@@ -49,4 +49,7 @@ export const api = {
   put: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+  upload: <T>(path: string, form: FormData) =>
+    // Don't set Content-Type — browser sets it with multipart boundary automatically
+    request<T>(path, { method: 'POST', body: form, headers: {} }),
 };

@@ -33,7 +33,6 @@ function computeBlocks(segments: Segment[], totalLeds: number): Block[] {
       blocks.push({ start: cursor, end: start, type: 'gap' });
     }
     // Check if this segment overlaps with the previous covered area
-    const overlapStart = Math.max(start, cursor > start ? cursor : start);
     if (start < cursor) {
       // Overlap portion
       blocks.push({ start, end: Math.min(cursor, end), type: 'overlap' });
