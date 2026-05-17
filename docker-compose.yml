@@ -8,7 +8,7 @@ services:
       - sqlite_data:/data
     environment:
       - DATABASE_PATH=/data/lightomation.db
-      - CORS_ORIGINS=http://localhost:${FRONTEND_PORT:-3000}
+      - CORS_ORIGINS=["http://localhost:${FRONTEND_PORT:-3000}"]
       - ENVIRONMENT=development
 
   frontend:
