@@ -121,12 +121,14 @@ class MasterPreset(Base):
     preset_data = Column(Text, nullable=False)
     source_light_id = Column(Integer, ForeignKey("lights.id"), nullable=True)
     source_preset_id = Column(Integer, nullable=True)
+    segment_group_hint = Column(Text, nullable=True)
     notes = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     category = relationship("PresetCategory", back_populates="presets")
     segment_config = relationship("LightSegmentConfig", back_populates="master_presets")
+    source_light = relationship("Light", foreign_keys=[source_light_id])
     assignments = relationship("LightPresetAssignment", back_populates="master_preset")
 
 
