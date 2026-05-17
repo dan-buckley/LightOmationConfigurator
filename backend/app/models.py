@@ -141,7 +141,12 @@ class LightPresetAssignment(Base):
     target_preset_id = Column(Integer, nullable=False)
     target_quick_label = Column(Text)
     sort_order = Column(Integer, nullable=False)
+    colour_mode = Column(Text, nullable=False, default="source")
+    palette_override = Column(Integer, nullable=True)
+    colour_slots = Column(Text, nullable=True)
     notes = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     light = relationship("Light", back_populates="preset_assignments")
     master_preset = relationship("MasterPreset", back_populates="assignments")
