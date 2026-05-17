@@ -1,9 +1,32 @@
 import { useEffect, useState } from 'react';
 import {
   deleteSegmentConfig,
+  detectColours,
   listSegmentConfigs,
+  patchEntryColour,
 } from '../../api/segmentConfigs';
 import type { SegmentConfig } from '../../api/segmentConfigs';
+import { SegmentGroupsPanel } from './SegmentGroupsPanel';
+
+// ---------------------------------------------------------------------------
+// Colour helpers — WLED stores "[R,G,B]" JSON; HTML color input uses #rrggbb
+// ---------------------------------------------------------------------------
+
+function rgbJsonToHex(colourJson: string): string {
+  try {
+    const [r, g, b] = JSON.parse(colourJson) as [number, number, number];
+    return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return '#000000';
+  }
+}
+
+function hexToRgbJson(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return JSON.stringify([r, g, b]);
+}
 
 interface SegmentConfigListProps {
   lightId: number;
@@ -17,6 +40,7 @@ export function SegmentConfigList({ lightId, onRefreshNeeded }: SegmentConfigLis
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [detectingImportId, setDetectingImportId] = useState<number | null>(null);
 
   async function load() {
     setLoading(true);
@@ -46,6 +70,29 @@ export function SegmentConfigList({ lightId, onRefreshNeeded }: SegmentConfigLis
     } else {
       setDeleteError(result.error.message);
     }
+  }
+
+  async function handleDetectColours(configId: number, importId: number) {
+    setDetectingImportId(importId);
+    const result = await detectColours(importId);
+    setDetectingImportId(null);
+    if (result.ok) {
+      // Reload configs to pick up updated colours
+      load();
+    }
+  }
+
+  async function handleColourChange(configId: number, entryId: number, hex: string) {
+    const colour = hexToRgbJson(hex);
+    // Optimistic update
+    setConfigs((prev) =>
+      prev.map((c) =>
+        c.id === configId
+          ? { ...c, entries: c.entries.map((e) => (e.id === entryId ? { ...e, colour } : e)) }
+          : c
+      )
+    );
+    await patchEntryColour(lightId, configId, entryId, colour);
   }
 
   if (loading) {
@@ -106,6 +153,19 @@ export function SegmentConfigList({ lightId, onRefreshNeeded }: SegmentConfigLis
 
           {expandedId === cfg.id && (
             <div className="px-4 pb-4 pt-2">
+              {/* Detect colours button */}
+              {cfg.source_import_id && (
+                <div className="mb-2 flex justify-end">
+                  <button
+                    className="text-xs text-blue-600 hover:text-blue-800 disabled:opacity-40"
+                    disabled={detectingImportId === cfg.source_import_id}
+                    onClick={() => handleDetectColours(cfg.id, cfg.source_import_id!)}
+                  >
+                    {detectingImportId === cfg.source_import_id ? 'Detecting…' : '✦ Detect colours'}
+                  </button>
+                </div>
+              )}
+
               <table className="w-full text-sm text-left border-collapse">
                 <thead>
                   <tr className="text-xs text-gray-500 uppercase tracking-wide">
@@ -117,6 +177,7 @@ export function SegmentConfigList({ lightId, onRefreshNeeded }: SegmentConfigLis
                       <th className="py-1 pr-4">Y Range</th>
                     )}
                     <th className="py-1 pr-4">Length</th>
+                    <th className="py-1 pr-4">Colour</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -134,10 +195,27 @@ export function SegmentConfigList({ lightId, onRefreshNeeded }: SegmentConfigLis
                       <td className="py-1.5 pr-4 font-mono text-gray-500">
                         {e.stop_led - e.start_led}
                       </td>
+                      <td className="py-1.5 pr-4">
+                        <label className="cursor-pointer inline-flex items-center gap-1.5" title={e.colour ?? 'Set colour'}>
+                          <span
+                            className="inline-block w-4 h-4 rounded border border-gray-300"
+                            style={{ backgroundColor: e.colour ? rgbJsonToHex(e.colour) : 'transparent' }}
+                          />
+                          <input
+                            type="color"
+                            className="sr-only"
+                            value={e.colour ? rgbJsonToHex(e.colour) : '#000000'}
+                            onChange={(ev) => handleColourChange(cfg.id, e.id, ev.target.value)}
+                          />
+                          {!e.colour && <span className="text-xs text-gray-300">—</span>}
+                        </label>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+
+              <SegmentGroupsPanel lightId={lightId} config={cfg} />
             </div>
           )}
         </div>

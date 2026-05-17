@@ -17,6 +17,8 @@ from app.models import (
     Light,
     LightSegmentConfig,
     LightSegmentConfigEntry,
+    LightSegmentGroup,
+    LightSegmentGroupMember,
     MasterPreset,
 )
 from app.schemas import PaginatedResponse, SuccessResponse
@@ -77,6 +79,39 @@ class ScanResult(BaseModel):
     unique_configs_found: int
     new_configs_created: int
     configs: list[ScannedConfig]
+
+
+class SegmentGroupMemberOut(BaseModel):
+    id: int
+    group_id: int
+    entry_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SegmentGroupOut(BaseModel):
+    id: int
+    config_id: int
+    name: str
+    description: str | None = None
+    display_order: int
+    members: list[SegmentGroupMemberOut]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SegmentGroupIn(BaseModel):
+    name: str
+    description: str | None = None
+    display_order: int = 0
+
+
+class GroupMembersIn(BaseModel):
+    entry_ids: list[int]
+
+
+class EntryColourIn(BaseModel):
+    colour: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -161,6 +196,27 @@ def _config_with_entries(config_id: int, db: Session) -> LightSegmentConfig:
         db.query(LightSegmentConfig)
         .options(selectinload(LightSegmentConfig.entries))
         .filter(LightSegmentConfig.id == config_id)
+        .one()
+    )
+
+
+def _verify_config(config_id: int, light_id: int, db: Session) -> LightSegmentConfig:
+    cfg = (
+        db.query(LightSegmentConfig)
+        .options(selectinload(LightSegmentConfig.entries))
+        .filter(LightSegmentConfig.id == config_id, LightSegmentConfig.light_id == light_id)
+        .first()
+    )
+    if not cfg:
+        raise HTTPException(status_code=404, detail=f"Segment config {config_id} not found for light {light_id}")
+    return cfg
+
+
+def _group_with_members(group_id: int, db: Session) -> LightSegmentGroup:
+    return (
+        db.query(LightSegmentGroup)
+        .options(selectinload(LightSegmentGroup.members))
+        .filter(LightSegmentGroup.id == group_id)
         .one()
     )
 
@@ -302,3 +358,135 @@ def delete_config(
 
     db.delete(cfg)
     db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Group routes — /{config_id}/groups
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{config_id}/groups", response_model=PaginatedResponse[SegmentGroupOut])
+def list_groups(light_id: int, config_id: int, db: Session = Depends(get_db)) -> PaginatedResponse[SegmentGroupOut]:
+    _verify_config(config_id, light_id, db)
+    groups = (
+        db.query(LightSegmentGroup)
+        .options(selectinload(LightSegmentGroup.members))
+        .filter(LightSegmentGroup.config_id == config_id)
+        .order_by(LightSegmentGroup.display_order, LightSegmentGroup.id)
+        .all()
+    )
+    items = [SegmentGroupOut.model_validate(g) for g in groups]
+    return PaginatedResponse(items=items, total=len(items), page=1, page_size=len(items))
+
+
+@router.post("/{config_id}/groups", response_model=SuccessResponse[SegmentGroupOut], status_code=201)
+def create_group(
+    light_id: int, config_id: int, body: SegmentGroupIn, db: Session = Depends(get_db)
+) -> SuccessResponse[SegmentGroupOut]:
+    _verify_config(config_id, light_id, db)
+    conflict = db.query(LightSegmentGroup).filter(
+        LightSegmentGroup.config_id == config_id, LightSegmentGroup.name == body.name
+    ).first()
+    if conflict:
+        raise HTTPException(status_code=409, detail=f"A group named '{body.name}' already exists in this config")
+    group = LightSegmentGroup(config_id=config_id, name=body.name, description=body.description, display_order=body.display_order)
+    db.add(group)
+    db.commit()
+    return SuccessResponse(data=SegmentGroupOut.model_validate(_group_with_members(group.id, db)))
+
+
+@router.get("/{config_id}/groups/{group_id}", response_model=SuccessResponse[SegmentGroupOut])
+def get_group(
+    light_id: int, config_id: int, group_id: int, db: Session = Depends(get_db)
+) -> SuccessResponse[SegmentGroupOut]:
+    _verify_config(config_id, light_id, db)
+    group = (
+        db.query(LightSegmentGroup)
+        .options(selectinload(LightSegmentGroup.members))
+        .filter(LightSegmentGroup.id == group_id, LightSegmentGroup.config_id == config_id)
+        .first()
+    )
+    if not group:
+        raise HTTPException(status_code=404, detail=f"Group {group_id} not found in config {config_id}")
+    return SuccessResponse(data=SegmentGroupOut.model_validate(group))
+
+
+@router.put("/{config_id}/groups/{group_id}", response_model=SuccessResponse[SegmentGroupOut])
+def update_group(
+    light_id: int, config_id: int, group_id: int, body: SegmentGroupIn, db: Session = Depends(get_db)
+) -> SuccessResponse[SegmentGroupOut]:
+    _verify_config(config_id, light_id, db)
+    group = db.query(LightSegmentGroup).filter(
+        LightSegmentGroup.id == group_id, LightSegmentGroup.config_id == config_id
+    ).first()
+    if not group:
+        raise HTTPException(status_code=404, detail=f"Group {group_id} not found in config {config_id}")
+    conflict = db.query(LightSegmentGroup).filter(
+        LightSegmentGroup.config_id == config_id,
+        LightSegmentGroup.name == body.name,
+        LightSegmentGroup.id != group_id,
+    ).first()
+    if conflict:
+        raise HTTPException(status_code=409, detail=f"A group named '{body.name}' already exists in this config")
+    group.name = body.name
+    group.description = body.description
+    group.display_order = body.display_order
+    db.commit()
+    return SuccessResponse(data=SegmentGroupOut.model_validate(_group_with_members(group_id, db)))
+
+
+@router.delete("/{config_id}/groups/{group_id}", status_code=204)
+def delete_group(
+    light_id: int, config_id: int, group_id: int, db: Session = Depends(get_db)
+) -> None:
+    _verify_config(config_id, light_id, db)
+    group = db.query(LightSegmentGroup).filter(
+        LightSegmentGroup.id == group_id, LightSegmentGroup.config_id == config_id
+    ).first()
+    if not group:
+        raise HTTPException(status_code=404, detail=f"Group {group_id} not found in config {config_id}")
+    db.delete(group)
+    db.commit()
+
+
+@router.put("/{config_id}/groups/{group_id}/members", response_model=SuccessResponse[SegmentGroupOut])
+def replace_group_members(
+    light_id: int, config_id: int, group_id: int, body: GroupMembersIn, db: Session = Depends(get_db)
+) -> SuccessResponse[SegmentGroupOut]:
+    cfg = _verify_config(config_id, light_id, db)
+    group = db.query(LightSegmentGroup).filter(
+        LightSegmentGroup.id == group_id, LightSegmentGroup.config_id == config_id
+    ).first()
+    if not group:
+        raise HTTPException(status_code=404, detail=f"Group {group_id} not found in config {config_id}")
+    valid_ids = {e.id for e in cfg.entries}
+    for eid in body.entry_ids:
+        if eid not in valid_ids:
+            raise HTTPException(status_code=400, detail=f"Entry {eid} does not belong to config {config_id}")
+    db.query(LightSegmentGroupMember).filter(LightSegmentGroupMember.group_id == group_id).delete()
+    for eid in set(body.entry_ids):
+        db.add(LightSegmentGroupMember(group_id=group_id, entry_id=eid))
+    db.commit()
+    return SuccessResponse(data=SegmentGroupOut.model_validate(_group_with_members(group_id, db)))
+
+
+# ---------------------------------------------------------------------------
+# Entry colour patch — /{config_id}/entries/{entry_id}/colour
+# ---------------------------------------------------------------------------
+
+
+@router.patch("/{config_id}/entries/{entry_id}/colour", response_model=SuccessResponse[SegmentConfigEntryOut])
+def patch_entry_colour(
+    light_id: int, config_id: int, entry_id: int, body: EntryColourIn, db: Session = Depends(get_db)
+) -> SuccessResponse[SegmentConfigEntryOut]:
+    _verify_config(config_id, light_id, db)
+    entry = db.query(LightSegmentConfigEntry).filter(
+        LightSegmentConfigEntry.id == entry_id,
+        LightSegmentConfigEntry.config_id == config_id,
+    ).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail=f"Entry {entry_id} not found in config {config_id}")
+    entry.colour = body.colour
+    db.commit()
+    db.refresh(entry)
+    return SuccessResponse(data=SegmentConfigEntryOut.model_validate(entry))

@@ -56,6 +56,7 @@ class LightSegmentConfig(Base):
     light = relationship("Light", back_populates="segment_configs")
     source_import = relationship("ImportedFile", back_populates="segment_configs")
     entries = relationship("LightSegmentConfigEntry", back_populates="config", cascade="all, delete-orphan", order_by="LightSegmentConfigEntry.segment_index")
+    groups = relationship("LightSegmentGroup", back_populates="config", cascade="all, delete-orphan")
     master_presets = relationship("MasterPreset", back_populates="segment_config")
 
 
@@ -73,6 +74,31 @@ class LightSegmentConfigEntry(Base):
     colour = Column(Text)
 
     config = relationship("LightSegmentConfig", back_populates="entries")
+    group_memberships = relationship("LightSegmentGroupMember", back_populates="entry", cascade="all, delete-orphan")
+
+
+class LightSegmentGroup(Base):
+    __tablename__ = "light_segment_groups"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    config_id = Column(Integer, ForeignKey("light_segment_configs.id"), nullable=False)
+    name = Column(Text, nullable=False)
+    description = Column(Text)
+    display_order = Column(Integer, default=0)
+
+    config = relationship("LightSegmentConfig", back_populates="groups")
+    members = relationship("LightSegmentGroupMember", back_populates="group", cascade="all, delete-orphan")
+
+
+class LightSegmentGroupMember(Base):
+    __tablename__ = "light_segment_group_members"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    group_id = Column(Integer, ForeignKey("light_segment_groups.id"), nullable=False)
+    entry_id = Column(Integer, ForeignKey("light_segment_config_entries.id"), nullable=False)
+
+    group = relationship("LightSegmentGroup", back_populates="members")
+    entry = relationship("LightSegmentConfigEntry", back_populates="group_memberships")
 
 
 class PresetCategory(Base):

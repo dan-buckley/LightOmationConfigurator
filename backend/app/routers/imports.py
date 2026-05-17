@@ -584,3 +584,76 @@ def scan_segments(
             configs=output_configs,
         )
     )
+
+
+# ---------------------------------------------------------------------------
+# detect-colours endpoint
+# ---------------------------------------------------------------------------
+
+
+class DetectColoursResult(BaseModel):
+    entries_updated: int
+    colours_by_index: dict[int, str]  # segment_index -> "[R,G,B]"
+
+
+@router.post("/{import_id}/detect-colours", response_model=SuccessResponse[DetectColoursResult])
+def detect_colours(import_id: int, db: Session = Depends(get_db)) -> SuccessResponse[DetectColoursResult]:
+    """Detect characteristic colours per segment index from a presets.json import
+    and store them on segment config entries linked to that import."""
+    from collections import Counter
+    from sqlalchemy.orm import selectinload as _sel
+
+    imp = db.query(ImportedFile).filter(ImportedFile.id == import_id).first()
+    if not imp:
+        raise HTTPException(status_code=404, detail=f"Import {import_id} not found")
+    if imp.file_type != "presets":
+        raise HTTPException(status_code=400, detail="detect-colours requires a presets.json import")
+
+    data = json.loads(imp.raw_json)
+
+    # Collect col[0] per segment index across all presets
+    colours_by_index: dict[int, list[str]] = {}
+    for _key, preset in data.items():
+        if not isinstance(preset, dict):
+            continue
+        if "playlist" in preset:
+            continue
+        seg_list = preset.get("seg")
+        if not seg_list or not isinstance(seg_list, list):
+            continue
+        for i, seg in enumerate(seg_list):
+            if not isinstance(seg, dict):
+                continue
+            col = seg.get("col")
+            if not col or not isinstance(col, list) or not col[0]:
+                continue
+            col0 = col[0]
+            if isinstance(col0, list) and len(col0) == 3:
+                colours_by_index.setdefault(i, []).append(json.dumps(col0))
+
+    if not colours_by_index:
+        return SuccessResponse(data=DetectColoursResult(entries_updated=0, colours_by_index={}))
+
+    # Find modal colour per segment index
+    mode_colour: dict[int, str] = {
+        idx: Counter(vals).most_common(1)[0][0]
+        for idx, vals in colours_by_index.items()
+    }
+
+    # Update entries in configs linked to this import
+    configs = (
+        db.query(LightSegmentConfig)
+        .options(_sel(LightSegmentConfig.entries))
+        .filter(LightSegmentConfig.source_import_id == import_id)
+        .all()
+    )
+    updated = 0
+    for cfg in configs:
+        for entry in cfg.entries:
+            colour = mode_colour.get(entry.segment_index)
+            if colour is not None:
+                entry.colour = colour
+                updated += 1
+
+    db.commit()
+    return SuccessResponse(data=DetectColoursResult(entries_updated=updated, colours_by_index=mode_colour))

@@ -37,7 +37,7 @@
 | 1.2.3 | Matrix Light Support | Data Management | `Done` | 1.2.1, 1.2.2 | M1 | [1.2.3](specs/1.2.3_matrix_support.md) |
 | 1.3 | Master Preset Library | Data Management | `Backlog` | 1.2.1, 1.5 | M1 | [1.3](specs/1.3_master_preset_library.md) |
 | 1.4 | Light Preset Assignments | Data Management | `Backlog` | 1.1, 1.3 | M1 | [1.4](specs/1.4_light_preset_assignments.md) |
-| 1.5 | Segment Groups | Data Management | `Backlog` | 1.2.1, 1.2.3 | M1 | [1.5](specs/1.5_segment_groups.md) |
+| 1.5 | Segment Groups | Data Management | `Done` | 1.2.1, 1.2.3 | M1 | [1.5](specs/1.5_segment_groups.md) |
 | 2.1 | Transposition Engine | Processing | `Backlog` | 1.1, 1.2.3, 1.5 | M2 | [2.1](specs/2.1_transposition_engine.md) |
 | 2.2 | Generation Engine | Processing | `Backlog` | 1.4, 2.1 | M2 | [2.2](specs/2.2_generation_engine.md) |
 | 2.3 | Validation Engine | Processing | `Backlog` | 2.2 | M2 | [2.3](specs/2.3_validation_engine.md) |

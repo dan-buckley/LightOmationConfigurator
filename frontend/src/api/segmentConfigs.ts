@@ -67,6 +67,51 @@ export interface ScanResult {
 }
 
 // ---------------------------------------------------------------------------
+// Groups
+// ---------------------------------------------------------------------------
+
+export interface SegmentGroupMember {
+  id: number;
+  group_id: number;
+  entry_id: number;
+}
+
+export interface SegmentGroup {
+  id: number;
+  config_id: number;
+  name: string;
+  description: string | null;
+  display_order: number;
+  members: SegmentGroupMember[];
+}
+
+export interface SegmentGroupsPage {
+  items: SegmentGroup[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface SegmentGroupIn {
+  name: string;
+  description?: string | null;
+  display_order?: number;
+}
+
+export interface GroupMembersIn {
+  entry_ids: number[];
+}
+
+export interface EntryColourIn {
+  colour: string | null;
+}
+
+export interface DetectColoursResult {
+  entries_updated: number;
+  colours_by_index: Record<number, string>;
+}
+
+// ---------------------------------------------------------------------------
 // API functions
 // The client unwraps body.data automatically, so T should be the inner type.
 // List endpoints return PaginatedResponse → SegmentConfigsPage (no extra .data wrapper).
@@ -95,4 +140,36 @@ export function deleteSegmentConfig(lightId: number, configId: number): Promise<
 
 export function scanSegments(importId: number, apply = true): Promise<ApiResult<ScanResult>> {
   return api.post<ScanResult>(`/imports/${importId}/scan-segments`, { apply });
+}
+
+// ---------------------------------------------------------------------------
+// Group API
+// ---------------------------------------------------------------------------
+
+export function listGroups(lightId: number, configId: number): Promise<ApiResult<SegmentGroupsPage>> {
+  return api.get<SegmentGroupsPage>(`/lights/${lightId}/segment-configs/${configId}/groups`);
+}
+
+export function createGroup(lightId: number, configId: number, body: SegmentGroupIn): Promise<ApiResult<SegmentGroup>> {
+  return api.post<SegmentGroup>(`/lights/${lightId}/segment-configs/${configId}/groups`, body);
+}
+
+export function updateGroup(lightId: number, configId: number, groupId: number, body: SegmentGroupIn): Promise<ApiResult<SegmentGroup>> {
+  return api.put<SegmentGroup>(`/lights/${lightId}/segment-configs/${configId}/groups/${groupId}`, body);
+}
+
+export function deleteGroup(lightId: number, configId: number, groupId: number): Promise<ApiResult<void>> {
+  return api.delete<void>(`/lights/${lightId}/segment-configs/${configId}/groups/${groupId}`);
+}
+
+export function replaceGroupMembers(lightId: number, configId: number, groupId: number, entryIds: number[]): Promise<ApiResult<SegmentGroup>> {
+  return api.put<SegmentGroup>(`/lights/${lightId}/segment-configs/${configId}/groups/${groupId}/members`, { entry_ids: entryIds });
+}
+
+export function patchEntryColour(lightId: number, configId: number, entryId: number, colour: string | null): Promise<ApiResult<SegmentConfigEntry>> {
+  return api.patch<SegmentConfigEntry>(`/lights/${lightId}/segment-configs/${configId}/entries/${entryId}/colour`, { colour });
+}
+
+export function detectColours(importId: number): Promise<ApiResult<DetectColoursResult>> {
+  return api.post<DetectColoursResult>(`/imports/${importId}/detect-colours`, {});
 }
