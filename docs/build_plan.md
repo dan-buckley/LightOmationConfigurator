@@ -32,7 +32,7 @@
 | 0.4 | Frontend Scaffold | Foundation | `Done` | 0.3 | M0 | [0.4](specs/0.4_frontend_scaffold.md) |
 | 1.1 | Light Profile Manager | Data Management | `Done` | 0.4 | M1 | [1.1](specs/1.1_light_profile_manager.md) |
 | 1.2 | File Import | Data Management | `Done` | 0.4 | M1 | [1.2](specs/1.2_file_import.md) |
-| 1.2.1 | Segment Config Discovery | Data Management | `In Progress` | 1.2 | M1 | [1.2.1](specs/1.2.1_segment_config_discovery.md) |
+| 1.2.1 | Segment Config Discovery | Data Management | `Done` | 1.2 | M1 | [1.2.1](specs/1.2.1_segment_config_discovery.md) |
 | 1.3 | Master Preset Library | Data Management | `Backlog` | 1.2.1 | M1 | [1.3](specs/1.3_master_preset_library.md) |
 | 1.4 | Light Preset Assignments | Data Management | `Backlog` | 1.1, 1.3 | M1 | [1.4](specs/1.4_light_preset_assignments.md) |
 | 2.1 | Transposition Engine | Processing | `Backlog` | 1.1 | M2 | [2.1](specs/2.1_transposition_engine.md) |
