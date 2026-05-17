@@ -33,9 +33,12 @@
 | 1.1 | Light Profile Manager | Data Management | `Done` | 0.4 | M1 | [1.1](specs/1.1_light_profile_manager.md) |
 | 1.2 | File Import | Data Management | `Done` | 0.4 | M1 | [1.2](specs/1.2_file_import.md) |
 | 1.2.1 | Segment Config Discovery | Data Management | `Done` | 1.2 | M1 | [1.2.1](specs/1.2.1_segment_config_discovery.md) |
-| 1.3 | Master Preset Library | Data Management | `Backlog` | 1.2.1 | M1 | [1.3](specs/1.3_master_preset_library.md) |
+| 1.2.2 | Light Onboarding from CFG | Data Management | `Backlog` | 1.2 | M1 | [1.2.2](specs/1.2.2_light_onboarding.md) |
+| 1.2.3 | Matrix Light Support | Data Management | `Backlog` | 1.2.1, 1.2.2 | M1 | [1.2.3](specs/1.2.3_matrix_support.md) |
+| 1.3 | Master Preset Library | Data Management | `Backlog` | 1.2.1, 1.5 | M1 | [1.3](specs/1.3_master_preset_library.md) |
 | 1.4 | Light Preset Assignments | Data Management | `Backlog` | 1.1, 1.3 | M1 | [1.4](specs/1.4_light_preset_assignments.md) |
-| 2.1 | Transposition Engine | Processing | `Backlog` | 1.1 | M2 | [2.1](specs/2.1_transposition_engine.md) |
+| 1.5 | Segment Groups | Data Management | `Backlog` | 1.2.1, 1.2.3 | M1 | [1.5](specs/1.5_segment_groups.md) |
+| 2.1 | Transposition Engine | Processing | `Backlog` | 1.1, 1.2.3, 1.5 | M2 | [2.1](specs/2.1_transposition_engine.md) |
 | 2.2 | Generation Engine | Processing | `Backlog` | 1.4, 2.1 | M2 | [2.2](specs/2.2_generation_engine.md) |
 | 2.3 | Validation Engine | Processing | `Backlog` | 2.2 | M2 | [2.3](specs/2.3_validation_engine.md) |
 | 2.4 | Diff Engine | Processing | `Backlog` | 1.2, 2.2 | M2 | [2.4](specs/2.4_diff_engine.md) |
@@ -58,3 +61,4 @@
 | 2026-05-16 | 1.1 complete. Full CRUD for lights and segments: 7 API endpoints, Pydantic schemas, change log writes, coverage gap/overlap detection. Frontend: LightList, LightForm, SegmentEditor with live CoverageBar. All spec acceptance criteria met. |
 | 2026-05-17 | 1.2 complete. File import: upload (presets/cfg), list, detail, extract-profile endpoints. Frontend: ImportForm, ImportList, ExtractProfileModal, RawJsonModal. cfg.json extraction reads hw.led.total and hw.led.ins to pre-populate light profile. Network fetch stubbed (501) pending Module 3.2. |
 | 2026-05-17 | Design decision: WLED devices use different segment layouts per preset (e.g. full-strip vs 7-zone vs 5-zone). Added module 1.2.1 to model named segment configurations per light, auto-discover them from presets.json imports, and wire them into master presets before 1.3. Segment configs are the bridge between import and transposition. |
+| 2026-05-17 | Design expansion: added 4 light types (strip/matrix/multi_segment/composite). New modules: 1.2.2 (create light from cfg), 1.2.3 (matrix Y coordinates + light_type/shortcode columns), 1.5 (segment groups + characteristic colours). Updated module dependencies: 1.3 now depends on 1.5; 2.1 now depends on 1.2.3 and 1.5. Added colour theming (colour_mode, palette_override per assignment), quick-load label convention ({NN} {Effect Name}), and preset slot scheme to 1.4. Named segment groups for composite lights (DEE) added to 1.5 and transposition rules added to 2.1. Naming template and slot scheme validation added to 2.2. |

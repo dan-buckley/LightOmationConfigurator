@@ -106,16 +106,32 @@ The system will allow reusable preset templates to be stored once and used many 
 Each light will have a profile containing:
 
 - Light name
-- Device type or category
+- Device type or category (`strip`, `matrix`, `multi_segment`, `composite`)
+- Shortcode — 2–5 character abbreviation used in generated preset names (e.g. `RB`, `DEE`, `SM`)
 - WLED IP address
 - Firmware version
 - Total LED count
 - Number of segments
 - Segment names
-- Segment start and stop values
+- Segment start and stop values (plus Y-axis ranges for matrix lights)
 - Segment order
+- Characteristic colour per segment — the `[R,G,B]` identity colour for each segment (used by the colour theming engine)
+- Preset slot scheme — JSON defining which preset ID ranges are used for each preset type (live presets, build presets, buttons, etc.)
 - Notes and physical location
 - Current source file history
+
+### Light Type Classification
+
+Lights are classified into four types that control how the transposition engine and generation engine treat them:
+
+| Type | Description | Examples |
+|---|---|---|
+| `strip` | Single strip with one or two segments. Simple layout. | Single-colour bar, wash fixture |
+| `matrix` | 2D LED panel with X and Y segment coordinates. | Small Matrix (48×32), any rectangular panel |
+| `multi_segment` | Multiple segments along a 1D strip, potentially with per-segment reverse or mirror flags. | RB Proto rainbow, Small Rainbow arch, symmetric shapes |
+| `composite` | Multiple logically independent sub-units sharing one WLED controller. Each unit has its own characteristic colour identity. | DEE (hearts + letters), word lights |
+
+The light type is detected automatically from `cfg.json` (matrix block present → `matrix`) and can be set manually.
 
 ### Preset Transposition
 
@@ -129,6 +145,31 @@ For example:
 - Small Rainbow segment boundaries: `0, 47, 89, 126, 158, 182`
 
 A segmented preset copied from RB to Small Rainbow will keep effect settings such as colours, palette, speed, intensity, mirroring, reverse, and effect ID. It will replace `start` and `stop` values with the Small Rainbow segment layout.
+
+For matrix lights, segments carry X and Y ranges (`start`/`stop` and `startY`/`stopY`). The transposition engine maps 2D regions proportionally from the source matrix to the target matrix.
+
+For composite lights, a master preset may target a named segment group (e.g. "Hearts"). The engine maps only the segments within that group on the target light; segments outside the group are set to `stop=0` (WLED inactive).
+
+### Preset Naming and Slot Convention
+
+Live presets follow a two-part naming convention: `{NN} {Effect Name}`, where `{NN}` is a two-digit zero-padded sequence number unique to the light (e.g. `01 Rainbow`, `14 Fire`). Build presets follow the convention `{shortcode} Build {N} ({description})` (e.g. `RB Build 3 (mid)`).
+
+Each light has a **preset slot scheme** — a JSON map defining which preset ID ranges are used for each purpose (live presets, build presets, playlist buttons, utility buttons). The generation engine validates that all assignments fall within the correct ranges and warns on conflicts.
+
+### Colour Theming
+
+Segment configurations can store a characteristic colour per segment — the `[R,G,B]` identity colour for that segment within its physical unit (e.g. Heart 1 = `[255,40,40]`, Heart 2 = `[180,0,255]`). These colours are detected automatically from imported presets (the most common `col[0]` across all presets for that segment index).
+
+Each light–preset assignment has a `colour_mode` that controls how segment colours are applied during generation:
+
+| Mode | Behaviour |
+|---|---|
+| `source` | Copy colours exactly from the master preset |
+| `segment` | Substitute `col[0]` on each segment with the characteristic colour from the light's segment config |
+| `custom` | Use explicit per-assignment colour overrides |
+
+An optional `palette_override` integer replaces the palette ID on all segments.
+
 
 ### Manual Import and Export
 
@@ -162,11 +203,15 @@ All structured data and raw file content will be stored in a single SQLite datab
 
 | Table | What it holds |
 |---|---|
-| `lights` | Light name, IP address, mdns hostname, total LEDs, firmware version, location, notes |
-| `light_segments` | Segment index, name, start LED, stop LED per light |
-| `master_presets` | Reusable preset templates — effect ID, colours, palette, speed, intensity, flags, category, notes |
+| `lights` | Light name, IP address, mdns hostname, total LEDs, firmware version, location, notes, light type, shortcode, preset slot scheme |
+| `light_segments` | Segment index, name, start LED, stop LED per light (reference/hardware default layout) |
+| `light_segment_configs` | Named segment configurations per light (e.g. "Hardware default", "7 zones") |
+| `light_segment_config_entries` | Start/stop (and Y range for matrix) per segment within a named config; characteristic colour per segment |
+| `light_segment_groups` | Named logical groups of segments within a config (e.g. "Hearts", "Letters") for composite lights |
+| `light_segment_group_members` | Join table: which entries belong to which group |
+| `master_presets` | Reusable preset templates — effect ID, colours, palette, speed, intensity, flags, category, notes, segment group hint |
 | `preset_categories` | Category names and descriptions |
-| `light_preset_assignments` | Which master preset maps to which target preset ID and quick-label on a specific light |
+| `light_preset_assignments` | Which master preset maps to which target preset ID, quick-label, colour mode, and palette override on a specific light |
 | `imported_files` | Raw JSON text of every imported `presets.json` and `cfg.json`, with light, import method, and timestamp |
 | `generated_files` | Raw JSON text of every generated `presets.json`, with light, timestamp, and notes |
 | `exported_files` | Record of every export — links to the generated file, method (download or network push), timestamp |
