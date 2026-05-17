@@ -17,6 +17,9 @@ class Light(Base):
     total_leds = Column(Integer)
     location = Column(Text)
     notes = Column(Text)
+    light_type = Column(Text, default='strip')
+    shortcode = Column(Text)
+    preset_slot_scheme = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -65,6 +68,9 @@ class LightSegmentConfigEntry(Base):
     name = Column(Text)
     start_led = Column(Integer, nullable=False)
     stop_led = Column(Integer, nullable=False)
+    start_y = Column(Integer)
+    stop_y = Column(Integer)
+    colour = Column(Text)
 
     config = relationship("LightSegmentConfig", back_populates="entries")
 

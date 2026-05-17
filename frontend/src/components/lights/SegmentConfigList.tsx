@@ -113,6 +113,9 @@ export function SegmentConfigList({ lightId, onRefreshNeeded }: SegmentConfigLis
                     <th className="py-1 pr-4">Name</th>
                     <th className="py-1 pr-4">Start LED</th>
                     <th className="py-1 pr-4">Stop LED</th>
+                    {cfg.entries.some(e => e.start_y != null) && (
+                      <th className="py-1 pr-4">Y Range</th>
+                    )}
                     <th className="py-1 pr-4">Length</th>
                   </tr>
                 </thead>
@@ -123,6 +126,11 @@ export function SegmentConfigList({ lightId, onRefreshNeeded }: SegmentConfigLis
                       <td className="py-1.5 pr-4 text-gray-700">{e.name ?? '—'}</td>
                       <td className="py-1.5 pr-4 font-mono text-gray-700">{e.start_led}</td>
                       <td className="py-1.5 pr-4 font-mono text-gray-700">{e.stop_led}</td>
+                      {cfg.entries.some(e => e.start_y != null) && (
+                        <td className="py-1.5 pr-4 font-mono text-gray-500">
+                          {e.start_y != null ? `${e.start_y}–${e.stop_y}` : '—'}
+                        </td>
+                      )}
                       <td className="py-1.5 pr-4 font-mono text-gray-500">
                         {e.stop_led - e.start_led}
                       </td>

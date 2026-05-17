@@ -37,6 +37,9 @@ class LightIn(BaseModel):
     total_leds: int
     location: str | None = None
     notes: str | None = None
+    light_type: str = 'strip'
+    shortcode: str | None = None
+    preset_slot_scheme: str | None = None
 
 
 class SegmentOut(BaseModel):
@@ -58,6 +61,9 @@ class LightOut(BaseModel):
     total_leds: int | None = None
     location: str | None = None
     notes: str | None = None
+    light_type: str = 'strip'
+    shortcode: str | None = None
+    preset_slot_scheme: str | None = None
     created_at: datetime
     updated_at: datetime
     segments: list[SegmentOut] = []
@@ -71,6 +77,7 @@ class LightSummary(BaseModel):
     name: str
     ip_address: str | None = None
     total_leds: int | None = None
+    light_type: str = 'strip'
     segment_count: int = 0
 
 
@@ -111,6 +118,9 @@ def _make_light_out(light: Light) -> LightOut:
         total_leds=light.total_leds,
         location=light.location,
         notes=light.notes,
+        light_type=light.light_type or 'strip',
+        shortcode=light.shortcode,
+        preset_slot_scheme=light.preset_slot_scheme,
         created_at=light.created_at,
         updated_at=light.updated_at,
         segments=sorted(
@@ -132,6 +142,9 @@ def _light_snapshot(light: Light) -> dict:
         "total_leds": light.total_leds,
         "location": light.location,
         "notes": light.notes,
+        "light_type": light.light_type,
+        "shortcode": light.shortcode,
+        "preset_slot_scheme": light.preset_slot_scheme,
     }
 
 
@@ -198,6 +211,7 @@ def list_lights(db: Session = Depends(get_db)) -> PaginatedResponse[LightSummary
             name=l.name,
             ip_address=l.ip_address,
             total_leds=l.total_leds,
+            light_type=l.light_type or 'strip',
             segment_count=len(l.segments),
         )
         for l in lights

@@ -11,6 +11,9 @@ export interface SegmentConfigEntry {
   name: string | null;
   start_led: number;
   stop_led: number;
+  start_y: number | null;
+  stop_y: number | null;
+  colour: string | null;
 }
 
 export interface SegmentConfig {
@@ -45,6 +48,8 @@ export interface ScannedConfigEntry {
   segment_index: number;
   start_led: number;
   stop_led: number;
+  start_y: number | null;
+  stop_y: number | null;
 }
 
 export interface ScannedConfig {

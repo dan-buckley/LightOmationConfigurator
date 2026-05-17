@@ -34,7 +34,7 @@
 | 1.2 | File Import | Data Management | `Done` | 0.4 | M1 | [1.2](specs/1.2_file_import.md) |
 | 1.2.1 | Segment Config Discovery | Data Management | `Done` | 1.2 | M1 | [1.2.1](specs/1.2.1_segment_config_discovery.md) |
 | 1.2.2 | Light Onboarding from CFG | Data Management | `Done` | 1.2 | M1 | [1.2.2](specs/1.2.2_light_onboarding.md) |
-| 1.2.3 | Matrix Light Support | Data Management | `Backlog` | 1.2.1, 1.2.2 | M1 | [1.2.3](specs/1.2.3_matrix_support.md) |
+| 1.2.3 | Matrix Light Support | Data Management | `Done` | 1.2.1, 1.2.2 | M1 | [1.2.3](specs/1.2.3_matrix_support.md) |
 | 1.3 | Master Preset Library | Data Management | `Backlog` | 1.2.1, 1.5 | M1 | [1.3](specs/1.3_master_preset_library.md) |
 | 1.4 | Light Preset Assignments | Data Management | `Backlog` | 1.1, 1.3 | M1 | [1.4](specs/1.4_light_preset_assignments.md) |
 | 1.5 | Segment Groups | Data Management | `Backlog` | 1.2.1, 1.2.3 | M1 | [1.5](specs/1.5_segment_groups.md) |

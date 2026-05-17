@@ -19,6 +19,9 @@ const EMPTY_FORM: LightIn = {
   total_leds: 0,
   location: null,
   notes: null,
+  light_type: 'strip',
+  shortcode: null,
+  preset_slot_scheme: null,
 };
 
 export function LightForm({ lightId, onSaved, onCancel }: LightFormProps) {
@@ -49,6 +52,9 @@ export function LightForm({ lightId, onSaved, onCancel }: LightFormProps) {
         total_leds: l.total_leds ?? 0,
         location: l.location,
         notes: l.notes,
+        light_type: l.light_type ?? 'strip',
+        shortcode: l.shortcode,
+        preset_slot_scheme: l.preset_slot_scheme,
       });
     });
   }, [lightId]);
@@ -165,6 +171,45 @@ export function LightForm({ lightId, onSaved, onCancel }: LightFormProps) {
               placeholder="e.g. Living room"
             />
           </div>
+
+          {/* Light Type */}
+          <div>
+            <label className={labelClass}>Light Type</label>
+            <select
+              className={inputClass}
+              value={form.light_type ?? 'strip'}
+              onChange={(e) => set('light_type', e.target.value)}
+            >
+              <option value="strip">strip</option>
+              <option value="matrix">matrix</option>
+              <option value="multi_segment">multi_segment</option>
+              <option value="composite">composite</option>
+            </select>
+          </div>
+
+          {/* Shortcode */}
+          <div>
+            <label className={labelClass}>Shortcode</label>
+            <input
+              className={inputClass}
+              value={form.shortcode ?? ''}
+              onChange={(e) => set('shortcode', e.target.value || null)}
+              placeholder="e.g. RB, DEE, SM"
+              maxLength={5}
+            />
+          </div>
+        </div>
+
+        {/* Preset Slot Scheme */}
+        <div>
+          <label className={labelClass}>Preset Slot Scheme (JSON)</label>
+          <textarea
+            className={inputClass}
+            rows={3}
+            value={form.preset_slot_scheme ?? ''}
+            onChange={(e) => set('preset_slot_scheme', e.target.value || null)}
+            placeholder='{"fx": [1,30], "colour": [31,60]}'
+          />
         </div>
 
         {/* Notes */}

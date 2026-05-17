@@ -47,6 +47,9 @@ class SegmentConfigEntryOut(BaseModel):
     name: str | None = None
     start_led: int
     stop_led: int
+    start_y: int | None = None
+    stop_y: int | None = None
+    colour: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -81,8 +84,8 @@ class ScanResult(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def _fingerprint(entries: list[tuple[int, int]]) -> str:
-    """Canonical fingerprint for a segment layout: sorted list of (start, stop) pairs."""
+def _fingerprint(entries: list[tuple[int, int, int, int]]) -> str:
+    """Canonical fingerprint for a segment layout: sorted list of (start, stop, start_y, stop_y) tuples."""
     return json.dumps(sorted(entries))
 
 
@@ -96,7 +99,7 @@ def _existing_fingerprints(light_id: int, db: Session) -> dict[str, int]:
     )
     result: dict[str, int] = {}
     for cfg in configs:
-        fp = _fingerprint([(e.start_led, e.stop_led) for e in cfg.entries])
+        fp = _fingerprint([(e.start_led, e.stop_led, e.start_y or 0, e.stop_y or 0) for e in cfg.entries])
         result[fp] = cfg.id
     return result
 

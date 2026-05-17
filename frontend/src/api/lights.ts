@@ -27,6 +27,9 @@ export interface LightIn {
   total_leds: number;
   location?: string | null;
   notes?: string | null;
+  light_type?: string;
+  shortcode?: string | null;
+  preset_slot_scheme?: string | null;
 }
 
 export interface LightOut {
@@ -38,6 +41,9 @@ export interface LightOut {
   total_leds: number | null;
   location: string | null;
   notes: string | null;
+  light_type: string;
+  shortcode: string | null;
+  preset_slot_scheme: string | null;
   created_at: string;
   updated_at: string;
   segments: SegmentOut[];
@@ -51,6 +57,7 @@ export interface LightSummary {
   name: string;
   ip_address: string | null;
   total_leds: number | null;
+  light_type: string;
   segment_count: number;
 }
 

@@ -58,6 +58,8 @@ class ScannedConfigEntry(BaseModel):
     segment_index: int
     start_led: int
     stop_led: int
+    start_y: int | None = None
+    stop_y: int | None = None
 
 
 class ScannedConfig(BaseModel):
@@ -326,10 +328,15 @@ def extract_profile(
     total_leds, segments, warnings = _parse_cfg_profile(imp.raw_json)
     applied = False
 
+    # Detect matrix light type from cfg JSON (needed before apply block)
+    _cfg_data = json.loads(imp.raw_json)
+    is_matrix = bool(_cfg_data.get("hw", {}).get("led", {}).get("matrix"))
+
     if body.apply:
         light = imp.light
         before = {
             "total_leds": light.total_leds,
+            "light_type": light.light_type,
             "segments": [
                 {"name": s.name, "start_led": s.start_led, "stop_led": s.stop_led}
                 for s in light.segments
@@ -337,6 +344,8 @@ def extract_profile(
         }
         light.total_leds = total_leds
         light.updated_at = datetime.utcnow()
+        if is_matrix:
+            light.light_type = 'matrix'
         # replace reference segments
         db.query(LightSegment).filter(LightSegment.light_id == light.id).delete()
         for idx, seg in enumerate(segments):
@@ -351,6 +360,7 @@ def extract_profile(
             )
         after = {
             "total_leds": total_leds,
+            "light_type": light.light_type,
             "segments": [
                 {"name": s.name, "start_led": s.start_led, "stop_led": s.stop_led}
                 for s in segments
@@ -412,7 +422,7 @@ def _upsert_hardware_default_config(
 # ---------------------------------------------------------------------------
 
 
-def _fingerprint(pairs: list[tuple[int, int]]) -> str:
+def _fingerprint(pairs: list[tuple[int, int, int, int]]) -> str:
     return json.dumps(sorted(pairs))
 
 
@@ -426,20 +436,20 @@ def _existing_fingerprints(light_id: int, db: Session) -> dict[str, int]:
     )
     result: dict[str, int] = {}
     for cfg in configs:
-        fp = _fingerprint([(e.start_led, e.stop_led) for e in cfg.entries])
+        fp = _fingerprint([(e.start_led, e.stop_led, e.start_y or 0, e.stop_y or 0) for e in cfg.entries])
         result[fp] = cfg.id
     return result
 
 
-def _scan_presets_json_raw(raw: str) -> list[tuple[str, list[tuple[int, int]]]]:
-    """Return [(preset_name, [(start, stop), ...]), ...] for unique segment layouts."""
+def _scan_presets_json_raw(raw: str) -> list[tuple[str, list[tuple[int, int, int | None, int | None]]]]:
+    """Return [(preset_name, [(start, stop, start_y, stop_y), ...]), ...] for unique segment layouts."""
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
         return []
 
     seen: dict[str, str] = {}
-    ordered: list[tuple[str, list[tuple[int, int]]]] = []
+    ordered: list[tuple[str, list[tuple[int, int, int | None, int | None]]]] = []
 
     for _key, preset in data.items():
         if not isinstance(preset, dict):
@@ -450,7 +460,7 @@ def _scan_presets_json_raw(raw: str) -> list[tuple[str, list[tuple[int, int]]]]:
         if not seg_list or not isinstance(seg_list, list):
             continue
 
-        pairs: list[tuple[int, int]] = []
+        pairs: list[tuple[int, int, int | None, int | None]] = []
         for seg in seg_list:
             if not isinstance(seg, dict):
                 continue
@@ -460,12 +470,14 @@ def _scan_presets_json_raw(raw: str) -> list[tuple[str, list[tuple[int, int]]]]:
             stop = seg.get("stop")
             if start is None or stop is None:
                 continue
-            pairs.append((int(start), int(stop)))
+            start_y: int | None = seg.get("startY")
+            stop_y: int | None = seg.get("stopY")
+            pairs.append((int(start), int(stop), start_y, stop_y))
 
         if not pairs:
             continue
 
-        fp = _fingerprint(pairs)
+        fp = _fingerprint([(s, e, sy or 0, ey or 0) for s, e, sy, ey in pairs])
         if fp in seen:
             continue
 
@@ -513,13 +525,13 @@ def scan_segments(
     new_count = 0
 
     for name, pairs in discovered:
-        fp = _fingerprint(pairs)
+        fp = _fingerprint([(s, e, sy or 0, ey or 0) for s, e, sy, ey in pairs])
         if fp in existing:
             # already known — return without creating
             output_configs.append(
                 ScannedConfig(
                     name=name,
-                    entries=[ScannedConfigEntry(segment_index=i, start_led=s, stop_led=e) for i, (s, e) in enumerate(pairs)],
+                    entries=[ScannedConfigEntry(segment_index=i, start_led=s, stop_led=e, start_y=sy, stop_y=ey) for i, (s, e, sy, ey) in enumerate(pairs)],
                     persisted=True,
                     config_id=existing[fp],
                 )
@@ -530,13 +542,15 @@ def scan_segments(
             cfg = LightSegmentConfig(light_id=imp.light_id, name=name, source_import_id=import_id)
             db.add(cfg)
             db.flush()
-            for idx, (start, stop) in enumerate(pairs):
+            for idx, (start, stop, start_y, stop_y) in enumerate(pairs):
                 db.add(
                     LightSegmentConfigEntry(
                         config_id=cfg.id,
                         segment_index=idx,
                         start_led=start,
                         stop_led=stop,
+                        start_y=start_y,
+                        stop_y=stop_y,
                     )
                 )
             existing[fp] = cfg.id
@@ -544,7 +558,7 @@ def scan_segments(
             output_configs.append(
                 ScannedConfig(
                     name=name,
-                    entries=[ScannedConfigEntry(segment_index=i, start_led=s, stop_led=e) for i, (s, e) in enumerate(pairs)],
+                    entries=[ScannedConfigEntry(segment_index=i, start_led=s, stop_led=e, start_y=sy, stop_y=ey) for i, (s, e, sy, ey) in enumerate(pairs)],
                     persisted=True,
                     config_id=cfg.id,
                 )
@@ -553,7 +567,7 @@ def scan_segments(
             output_configs.append(
                 ScannedConfig(
                     name=name,
-                    entries=[ScannedConfigEntry(segment_index=i, start_led=s, stop_led=e) for i, (s, e) in enumerate(pairs)],
+                    entries=[ScannedConfigEntry(segment_index=i, start_led=s, stop_led=e, start_y=sy, stop_y=ey) for i, (s, e, sy, ey) in enumerate(pairs)],
                     persisted=False,
                     config_id=None,
                 )
